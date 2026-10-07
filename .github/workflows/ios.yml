@@ -1,0 +1,73 @@
+name: Build Aeva iOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build:
+    name: Build Aeva
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show project
+        run: |
+          echo "=== Repository ==="
+          pwd
+          echo "=== Files ==="
+          find . -maxdepth 3 -type f | sort
+          echo "=== Xcode projects ==="
+          find . -name "*.xcodeproj" -o -name "*.xcworkspace"
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: List schemes
+        run: |
+          xcodebuild \
+            -project "Aeva.xcodeproj" \
+            -list
+
+      - name: Build Aeva
+        run: |
+          set -e
+
+          xcodebuild \
+            -project "Aeva.xcodeproj" \
+            -scheme "Aeva" \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: Package build
+        run: |
+          mkdir -p artifacts
+
+          APP_PATH=$(find build/Build/Products -name "Aeva.app" -type d | head -n 1)
+
+          if [ -z "$APP_PATH" ]; then
+            echo "ERRORE: Aeva.app non trovata"
+            exit 1
+          fi
+
+          echo "App trovata:"
+          echo "$APP_PATH"
+
+          cp -R "$APP_PATH" artifacts/Aeva.app
+
+      - name: Upload Aeva artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aeva-iOS
+          path: artifacts/Aeva.app
