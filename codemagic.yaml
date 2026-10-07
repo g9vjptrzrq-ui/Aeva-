@@ -1,0 +1,21 @@
+workflows:
+  aeva-ios:
+    name: Aeva iOS Build
+
+    environment:
+      xcode: latest
+
+    scripts:
+      - name: Build Aeva
+        script: |
+          xcodebuild archive \
+            -project "Aeva.xcodeproj" \
+            -scheme "Aeva" \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath "$CM_BUILD_DIR/Aeva.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO
+
+    artifacts:
+      - "$CM_BUILD_DIR/Aeva.xcarchive"
+      - /tmp/xcodebuild_logs/*.log
