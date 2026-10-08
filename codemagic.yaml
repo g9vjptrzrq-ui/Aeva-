@@ -84,4 +84,3 @@ workflows:
       - $CM_BUILD_DIR/Aeva-app.zip
       - $CM_BUILD_DIR/DerivedData/Build/Products/Release-iphoneos/Aeva.app
       - /tmp/xcodebuild_logs/*.log
-```
