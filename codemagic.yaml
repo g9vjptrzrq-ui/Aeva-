@@ -1,21 +1,88 @@
+```yaml
 workflows:
   aeva-ios:
-    name: Aeva iOS Build
+    name: AEVA iOS Build
+
+    instance_type: mac_mini_m2
 
     environment:
       xcode: latest
 
     scripts:
-      - name: Build Aeva
+      - name: Inspect project
         script: |
-          xcodebuild archive \
-            -project "Aeva.xcodeproj" \
-            -scheme "Aeva" \
+          set -eu
+
+          echo "=== CARTELLA CORRENTE ==="
+          pwd
+
+          echo "=== PROGETTI XCODE ==="
+          find . -name "*.xcodeproj" -print
+
+          echo "=== WORKSPACE ==="
+          find . -name "*.xcworkspace" -print
+
+          echo "=== SCHEMES ==="
+          find . -name "*.xcscheme" -print
+
+      - name: Locate Xcode project
+        script: |
+          set -eu
+
+          PROJECT=$(find . -maxdepth 4 -name "Aeva.xcodeproj" -print -quit)
+
+          if [ -z "$PROJECT" ]; then
+            echo "ERRORE: Aeva.xcodeproj non trovato."
+            echo "Controlla la struttura del repository."
+            exit 1
+          fi
+
+          echo "Progetto trovato: $PROJECT"
+          echo "$PROJECT" > /tmp/aeva_project_path
+
+      - name: Discover scheme
+        script: |
+          set -eu
+
+          PROJECT=$(cat /tmp/aeva_project_path)
+
+          xcodebuild -list -project "$PROJECT"
+
+      - name: Compile AEVA
+        script: |
+          set -eu
+
+          PROJECT=$(cat /tmp/aeva_project_path)
+
+          xcodebuild \
+            -project "$PROJECT" \
+            -scheme Aeva \
             -configuration Release \
             -sdk iphoneos \
-            -archivePath "$CM_BUILD_DIR/Aeva.xcarchive" \
-            CODE_SIGNING_ALLOWED=NO
+            -derivedDataPath "$CM_BUILD_DIR/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package application
+        script: |
+          set -eu
+
+          APP_PATH="$CM_BUILD_DIR/DerivedData/Build/Products/Release-iphoneos/Aeva.app"
+
+          if [ ! -d "$APP_PATH" ]; then
+            echo "ERRORE: Aeva.app non è stata generata."
+            find "$CM_BUILD_DIR/DerivedData/Build/Products" -maxdepth 3 -print
+            exit 1
+          fi
+
+          mkdir -p "$CM_BUILD_DIR/output"
+          ditto "$APP_PATH" "$CM_BUILD_DIR/output/Aeva.app"
+
+          cd "$CM_BUILD_DIR/output"
+          zip -r "$CM_BUILD_DIR/Aeva-app.zip" Aeva.app
 
     artifacts:
-      - "$CM_BUILD_DIR/Aeva.xcarchive"
+      - $CM_BUILD_DIR/Aeva-app.zip
+      - $CM_BUILD_DIR/DerivedData/Build/Products/Release-iphoneos/Aeva.app
       - /tmp/xcodebuild_logs/*.log
+```
