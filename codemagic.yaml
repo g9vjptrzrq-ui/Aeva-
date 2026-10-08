@@ -1,0 +1,52 @@
+workflows:
+  ios-testflight:
+    name: Aeva → TestFlight
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+
+    integrations:
+      app_store_connect: Aeva          # ← cambia con il nome della chiave che metti in Codemagic
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.aeva.app
+      vars:
+        XCODE_PROJECT: "Aeva.xcodeproj"
+        XCODE_SCHEME: "Aeva"
+        BUNDLE_ID: "com.aeva.app"
+      xcode: latest
+
+    scripts:
+      - name: Install XcodeGen
+        script: |
+          brew install xcodegen
+
+      - name: Generate Xcode project
+        script: |
+          xcodegen generate
+
+      - name: Set up code signing
+        script: |
+          xcode-project use-profiles
+
+      - name: Increment build number
+        script: |
+          agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0) + 1))
+
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # beta_groups:          # opzionale: nomi dei gruppi TestFlight
+        #   - Internal Testers
