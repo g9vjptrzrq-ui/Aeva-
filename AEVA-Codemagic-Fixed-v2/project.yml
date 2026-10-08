@@ -1,0 +1,30 @@
+name: Aeva
+options:
+  bundleIdPrefix: com.liam
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+targets:
+  Aeva:
+    type: application
+    platform: iOS
+    sources:
+      - path: Aeva
+        excludes:
+          - Info.plist
+    info:
+      path: Aeva/Info.plist
+      properties:
+        CFBundleDisplayName: AEVA
+        NSSupportsLiveActivities: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.liam.aeva
+        PRODUCT_NAME: Aeva
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
