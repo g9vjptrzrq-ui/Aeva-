@@ -1,4 +1,3 @@
-```yaml
 workflows:
   aeva-ios:
     name: AEVA iOS Build
