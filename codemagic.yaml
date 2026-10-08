@@ -1,0 +1,62 @@
+workflows:
+  aeva-ios:
+    name: AEVA iOS Build
+    instance_type: mac_mini_m2
+    environment:
+      xcode: latest
+    scripts:
+      - name: Check repository
+        script: |
+          set -euo pipefail
+          echo "Repository: $CM_BUILD_DIR"
+          test -f "$CM_BUILD_DIR/project.yml"
+          test -d "$CM_BUILD_DIR/Aeva"
+          find "$CM_BUILD_DIR/Aeva" -name '*.swift' -print
+      - name: Install XcodeGen
+        script: |
+          set -euo pipefail
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+      - name: Generate valid Xcode project
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR"
+          xcodegen generate --spec project.yml
+          test -d Aeva.xcodeproj
+      - name: Verify Xcode scheme
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR"
+          xcodebuild -list -project Aeva.xcodeproj
+      - name: Build AEVA
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR"
+          xcodebuild \
+            -project Aeva.xcodeproj \
+            -scheme Aeva \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath "$CM_BUILD_DIR/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+      - name: Package build artifact
+        script: |
+          set -euo pipefail
+          APP_PATH="$CM_BUILD_DIR/DerivedData/Build/Products/Release-iphoneos/Aeva.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "ERROR: Aeva.app not found; build did not produce the expected output."
+            find "$CM_BUILD_DIR/DerivedData/Build/Products" -maxdepth 4 -print || true
+            exit 1
+          fi
+          mkdir -p "$CM_BUILD_DIR/output"
+          ditto "$APP_PATH" "$CM_BUILD_DIR/output/Aeva.app"
+          cd "$CM_BUILD_DIR/output"
+          /usr/bin/zip -qry "$CM_BUILD_DIR/Aeva-app-unsigned.zip" Aeva.app
+    artifacts:
+      - $CM_BUILD_DIR/Aeva-app-unsigned.zip
+      - $CM_BUILD_DIR/DerivedData/Build/Products/Release-iphoneos/Aeva.app
+      - /tmp/xcodebuild_logs/*.log
